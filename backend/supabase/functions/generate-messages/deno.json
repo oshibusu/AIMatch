@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "lib": ["deno.window", "dom"],
+    "strict": true
+  },
+  "tasks": {
+    "serve": "deno run --allow-net --allow-env --allow-read --no-check index.ts"
+  }
+}

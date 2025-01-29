@@ -1,0 +1,39 @@
+require_relative '../node_modules/react-native/scripts/react_native_pods'
+require_relative '../node_modules/@react-native-community/cli-platform-ios/native_modules'
+
+# 新アーキテクチャ有効化のフラグ
+$RN_NEW_ARCH_ENABLED = ENV['RN_NEW_ARCH_ENABLED'] == '1'
+
+platform :ios, '16.0'
+prepare_react_native_project!
+
+target 'AIMatch_react_native' do
+  config = use_native_modules!
+  use_frameworks! :linkage => :static
+
+  # GoogleSignInの最新バージョンを使用
+  pod 'GoogleSignIn', '~> 7.1'
+
+  use_react_native!(
+    :path => config[:reactNativePath],
+    :hermes_enabled => true,
+    :fabric_enabled => $RN_NEW_ARCH_ENABLED,
+    :app_path => "#{Pod::Config.instance.installation_root}/.."
+  )
+
+  post_install do |installer|
+    # https://github.com/facebook/react-native/blob/main/packages/react-native/scripts/react_native_pods.rb#L197-L202
+    react_native_post_install(
+      installer,
+      config[:reactNativePath],
+      :mac_catalyst_enabled => false
+    )
+    
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |config|
+        config.build_settings['ENABLE_USER_SCRIPT_SANDBOXING'] = 'NO'
+        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '16.0'
+      end
+    end
+  end
+end
