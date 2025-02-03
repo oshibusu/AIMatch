@@ -141,23 +141,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     }
   };
 
-  const handleEmailLogin = async () => {
-    try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email: 'test@example.com', // TODO: メールアドレス入力UIの実装
-        options: {
-          emailRedirectTo: 'aimatch://login-callback/',
-        },
-      });
-      
-      if (error) throw error;
-      Alert.alert('確認', 'メールアドレスに認証リンクを送信しました');
-    } catch (error) {
-      Alert.alert('エラー', 'メール認証に失敗しました');
-      console.error(error);
-    }
-  };
-
   const handleExistingAccount = () => {
     navigation.navigate('SignIn');
   };
@@ -193,7 +176,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
           <TouchableOpacity 
             style={styles.button}
-            onPress={handleEmailLogin}
+            onPress={() => navigation.navigate('EmailSignUp')}
           >
             <Icon name="mail-outline" size={20} color="#000" style={styles.buttonIcon} />
             <Text style={styles.buttonText}>メールアドレスで登録</Text>

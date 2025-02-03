@@ -24,21 +24,80 @@ interface SignInScreenProps {
 const SignInScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
   const handleGoogleLogin = async () => {
     try {
+      console.log('Starting Google Sign-In process...');
       await GoogleSignin.hasPlayServices();
       const signInResult = await GoogleSignin.signIn();
+      console.log('Google Sign-In result:', signInResult);
+      
       const tokens = await GoogleSignin.getTokens();
+      console.log('Google tokens received');
       
       if (tokens.idToken) {
-        const { error } = await supabase.auth.signInWithIdToken({
+        console.log('Attempting Supabase authentication...');
+        const { data: { session }, error } = await supabase.auth.signInWithIdToken({
           provider: 'google',
           token: tokens.idToken,
         });
         
-        if (error) throw error;
+        if (error) {
+          console.error('Supabase auth error:', {
+            message: error.message,
+            status: error.status,
+            name: error.name,
+            stack: error.stack,
+          });
+          Alert.alert('認証エラー', `エラーの詳細: ${error.message}\nステータス: ${error.status}`);
+          return;
+        }
+
+        console.log('Supabase authentication successful:', {
+          user: session?.user?.id,
+          session: session?.access_token ? 'Valid' : 'Invalid',
+        });
+
+        // ユーザー情報の保存
+        if (session?.user) {
+          try {
+            const userEmail = signInResult.user.email || session.user.email;
+            const userName = signInResult.user.name || '';
+            const userPhoto = signInResult.user.photo || '';
+
+            if (!userEmail) {
+              console.warn('User email not found in both signInResult and session');
+              return;
+            }
+
+            const { error: upsertError } = await supabase
+              .from('users')
+              .upsert({
+                id: session.user.id,
+                email: userEmail,
+                account_name: userName,
+                avatar_url: userPhoto,
+                updated_at: new Date().toISOString(),
+              });
+
+            if (upsertError) {
+              console.error('Error saving user data:', upsertError);
+            } else {
+              console.log('User data saved successfully');
+            }
+          } catch (error) {
+            console.error('Error in user data operation:', error);
+          }
+        }
+
+        // メイン画面への遷移
+        navigation.replace('MainTabs');
       }
-    } catch (error) {
-      Alert.alert('エラー', 'Googleログインに失敗しました');
-      console.error(error);
+    } catch (error: any) {
+      console.error('Google Sign-In error:', {
+        message: error.message,
+        code: error.code,
+        stack: error.stack,
+      });
+      const errorMessage = error.message || 'Googleログインに失敗しました';
+      Alert.alert('エラー', errorMessage);
     }
   };
 
@@ -54,87 +113,90 @@ const SignInScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
         requestedScopes: [appleAuth.Scope.EMAIL, appleAuth.Scope.FULL_NAME],
       });
 
-      const { identityToken } = appleAuthRequestResponse;
+      const { identityToken, fullName, email } = appleAuthRequestResponse;
 
       if (identityToken) {
-        const { error } = await supabase.auth.signInWithIdToken({
+        const { data: { session }, error } = await supabase.auth.signInWithIdToken({
           provider: 'apple',
           token: identityToken,
         });
 
-        if (error) throw error;
+        if (error) {
+          console.error('Supabase auth error:', error);
+          Alert.alert('認証エラー', `エラーの詳細: ${error.message}`);
+          return;
+        }
+
+        console.log('Sign in successful:', session);
+
+        // ユーザー情報の保存
+        if (session?.user) {
+          try {
+            const { error: upsertError } = await supabase
+              .from('users')
+              .upsert({
+                id: session.user.id,
+                email: email,
+                full_name: fullName ? `${fullName.givenName} ${fullName.familyName}` : null,
+                updated_at: new Date().toISOString(),
+              });
+
+            if (upsertError) {
+              console.error('Error saving user data:', upsertError);
+            } else {
+              console.log('User data saved successfully');
+            }
+          } catch (error) {
+            console.error('Error in user data operation:', error);
+          }
+        }
+
+        // メイン画面への遷移
+        navigation.replace('MainTabs');
       } else {
         throw new Error('No identity token received');
       }
-    } catch (error) {
+    } catch (error: any) {
       const appleError = error as { code?: string };
       if (appleError.code === appleAuth.Error.CANCELED) {
         console.log('User canceled Apple Sign in.');
       } else {
-        Alert.alert('エラー', 'Appleログインに失敗しました');
-        console.error(error);
+        console.error('Apple Sign-In error:', error);
+        const errorMessage = error.message || 'Appleログインに失敗しました';
+        Alert.alert('エラー', errorMessage);
       }
-    }
-  };
-
-  const handleEmailLogin = async () => {
-    try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email: 'test@example.com', // TODO: メールアドレス入力UIの実装
-        options: {
-          emailRedirectTo: 'aimatch://login-callback/',
-        },
-      });
-      
-      if (error) throw error;
-      Alert.alert('確認', 'メールアドレスに認証リンクを送信しました');
-    } catch (error) {
-      Alert.alert('エラー', 'メール認証に失敗しました');
-      console.error(error);
     }
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Icon name="arrow-back" size={24} color="#000" />
-        </TouchableOpacity>
-
-        <View style={styles.titleContainer}>
-          <Text style={styles.title}>ログイン</Text>
-          <Text style={styles.subtitle}>
-            既存のアカウントで{'\n'}ログインしてください
-          </Text>
-        </View>
+        <Text style={styles.welcomeText}>AIMatchへようこそ</Text>
+        <Text style={styles.subText}>AIを使って理想の相手とマッチング</Text>
 
         <View style={styles.buttonContainer}>
-          <TouchableOpacity 
-            style={styles.button}
-            onPress={handleGoogleLogin}
+          <TouchableOpacity
+            style={styles.emailButton}
+            onPress={() => {
+              // EmailSignUpScreenに直接遷移
+              navigation.navigate('EmailSignUp');
+            }}
           >
-            <Icon name="logo-google" size={20} color="#000" style={styles.buttonIcon} />
-            <Text style={styles.buttonText}>Googleアカウントでログイン</Text>
+            <Icon name="mail-outline" size={24} color="#007AFF" />
+            <Text style={styles.emailButtonText}>メールアドレスで登録</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={styles.button}
-            onPress={handleAppleLogin}
-          >
-            <Icon name="logo-apple" size={20} color="#000" style={styles.buttonIcon} />
-            <Text style={styles.buttonText}>Apple IDでログイン</Text>
+          <TouchableOpacity style={styles.button} onPress={handleGoogleLogin}>
+            <Icon name="logo-google" size={24} color="#000" />
+            <Text style={styles.buttonText}>Googleでサインイン</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={styles.button}
-            onPress={handleEmailLogin}
-          >
-            <Icon name="mail-outline" size={20} color="#000" style={styles.buttonIcon} />
-            <Text style={styles.buttonText}>メールアドレスでログイン</Text>
-          </TouchableOpacity>
+          {Platform.OS === 'ios' && (
+            <TouchableOpacity style={styles.button} onPress={handleAppleLogin}>
+              <Icon name="logo-apple" size={24} color="#000" />
+              <Text style={styles.buttonText}>Apple IDでサインイン</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     </SafeAreaView>
@@ -151,25 +213,38 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 20,
   },
-  backButton: {
-    marginBottom: 30,
-  },
-  titleContainer: {
-    marginBottom: 40,
-  },
-  title: {
-    fontSize: 28,
+  welcomeText: {
+    fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 12,
     color: '#000',
   },
-  subtitle: {
+  subText: {
     fontSize: 16,
     color: '#666',
     lineHeight: 24,
   },
   buttonContainer: {
-    gap: 12,
+    width: '100%',
+    paddingHorizontal: 20,
+    marginTop: 40,
+  },
+  emailButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 2,
+    borderColor: '#007AFF',
+  },
+  emailButtonText: {
+    color: '#007AFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 12,
   },
   button: {
     flexDirection: 'row',
@@ -180,9 +255,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E5E7EB',
-  },
-  buttonIcon: {
-    marginRight: 12,
   },
   buttonText: {
     fontSize: 16,

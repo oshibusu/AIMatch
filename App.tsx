@@ -10,6 +10,7 @@ import { ErrorBoundary } from 'react-error-boundary';
 
 import LoginScreen from './src/screens/LoginScreen';
 import SignInScreen from './src/screens/SignInScreen';
+import EmailSignUpScreen from './src/screens/EmailSignUpScreen';
 import PhotoUploadScreen from './src/screens/PhotoUploadScreen';
 import DateSpotSearchScreen from './src/screens/DateSpotSearchScreen';
 import UploadSelectionScreen from './src/screens/UploadSelectionScreen';
@@ -164,6 +165,7 @@ function App(): React.JSX.Element {
       screens: {
         Login: 'login-callback',
         SignIn: 'signin',
+        EmailSignUp: 'email-signup',
         MainTabs: 'main',
         UploadSelection: 'upload-selection',
         TextToneAdjustment: 'text-tone-adjustment',
@@ -216,8 +218,10 @@ function App(): React.JSX.Element {
             }}
           />
           <Stack.Screen name="SignIn" component={SignInScreen} />
+          <Stack.Screen name="EmailSignUp" component={EmailSignUpScreen} />
           <Stack.Screen name="MainTabs" component={MainTabs} />
           <Stack.Screen name="UploadSelection" component={UploadSelectionScreen} />
+          <Stack.Screen name="PhotoUpload" component={PhotoUploadScreen} />
           <Stack.Screen name="TextToneAdjustment" component={TextToneAdjustmentScreen} />
           <Stack.Screen name="GeneratedMessages" component={GeneratedMessagesScreen} />
           <Stack.Screen name="CopyCompleted" component={CopyCompletedScreen} />

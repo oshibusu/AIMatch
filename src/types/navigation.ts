@@ -1,8 +1,10 @@
 export type RootStackParamList = {
   Login: undefined;
   SignIn: undefined;
+  EmailSignUp: undefined;
   MainTabs: undefined;
   UploadSelection: { type: 'newProfile' | 'newChat' | 'existingChat' };
+  PhotoUpload: { type: 'newProfile' | 'newChat' | 'existingChat' };
   TextToneAdjustment: {
     type: string;
     images: string[];

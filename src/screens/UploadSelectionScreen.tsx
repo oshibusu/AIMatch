@@ -25,38 +25,39 @@ const UploadSelectionScreen = () => {
           <Icon name="arrow-back-outline" size={24} color="#000" />
         </TouchableOpacity>
         <Text style={styles.title}>何をアップロードしますか？</Text>
-        <TouchableOpacity style={styles.infoIcon}>
-          <Icon name="information-circle-outline" size={24} color="#999" />
-        </TouchableOpacity>
       </View>
 
       <View style={styles.buttonContainer}>
         <TouchableOpacity
           style={styles.button}
-          onPress={() => navigation.navigate('New_PhotosUpload_from_phone', { type: 'newProfile' })}
+          onPress={() => navigation.navigate('PhotoUpload', { type: 'newProfile' })}
         >
-          <Text style={styles.buttonText}>新しい相手のプロフィール画面</Text>
+          <Icon name="person-add-outline" size={24} color="#007AFF" style={styles.buttonIcon} />
+          <Text style={styles.buttonText}>新しい相手のプロフィール</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.button}
-          onPress={() => navigation.navigate('New_PhotosUpload_from_phone', { type: 'newChat' })}
+          onPress={() => navigation.navigate('PhotoUpload', { type: 'newChat' })}
         >
+          <Icon name="chatbubble-outline" size={24} color="#007AFF" style={styles.buttonIcon} />
           <Text style={styles.buttonText}>新しい相手とのチャット</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.button}
-          onPress={() => navigation.navigate('New_PhotosUpload_from_phone', { type: 'existingChat' })}
+          onPress={() => navigation.navigate('PhotoUpload', { type: 'existingChat' })}
         >
-          <Text style={styles.buttonText}>既存の相手とのチャット</Text>
+          <Icon name="add-circle-outline" size={24} color="#007AFF" style={styles.buttonIcon} />
+          <Text style={styles.buttonText}>既存のチャットに追加</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.button}
-          onPress={() => navigation.navigate('New_PhotosUpload_from_phone', { type: 'existingProfile' })}
+          onPress={() => navigation.navigate('PhotoUpload', { type: 'existingProfile' })}
         >
-          <Text style={styles.buttonText}>既存の相手のプロフィール画面</Text>
+          <Icon name="person-outline" size={24} color="#007AFF" style={styles.buttonIcon} />
+          <Text style={styles.buttonText}>既存のプロフィールに追加</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -71,9 +72,9 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    marginTop: 20,
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
   },
   backButton: {
     padding: 8,
@@ -81,30 +82,30 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: '600',
     flex: 1,
-    textAlign: 'center',
-  },
-  infoIcon: {
-    padding: 8,
   },
   buttonContainer: {
     flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 20,
-    gap: 20,
+    padding: 16,
   },
   button: {
-    backgroundColor: '#E94C89',
-    paddingVertical: 20,
-    borderRadius: 30,
+    flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  buttonIcon: {
+    marginRight: 16,
   },
   buttonText: {
-    color: '#fff',
     fontSize: 16,
-    fontWeight: '600',
+    color: '#000',
+    flex: 1,
   },
 });
 

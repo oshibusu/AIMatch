@@ -22,6 +22,10 @@ type PurposeType = 'greeting' | 'chat' | 'date';
 const TextToneAdjustmentScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<Props['route']>();
+
+  // PhotoUploadScreenから渡ってきたOCR結果など
+  const { partnerId, recognizedText, screenType, partnerName } = route.params || {};
+
   const [tone, setTone] = useState<ToneType>('frank');
   const [length, setLength] = useState<LengthType>('long');
   const [purpose, setPurpose] = useState<PurposeType>('greeting');
@@ -33,37 +37,19 @@ const TextToneAdjustmentScreen = () => {
   );
 
   const handleGenerateMessage = () => {
-    // トーンの値を数値に変換
-    const getToneLevel = (t: ToneType) => {
-      switch (t) {
-        case 'frank': return 1;
-        case 'normal': return 2;
-        case 'formal': return 3;
-      }
-    };
-
-    // 目的に基づいてフレンドリーさとユーモアを調整
-    const getPurposeLevels = (p: PurposeType) => {
-      switch (p) {
-        case 'greeting':
-          return { friendliness: 2, humor: 1 };
-        case 'chat':
-          return { friendliness: 3, humor: 2 };
-        case 'date':
-          return { friendliness: 3, humor: 3 };
-      }
-    };
-
-    const purposeLevels = getPurposeLevels(purpose);
-
+    // GeneratedMessages画面に遷移
     navigation.navigate('GeneratedMessages', {
-      type: route.params.type,
-      images: route.params.images,
-      adjustedTone: {
-        formalityLevel: getToneLevel(tone),
-        friendlinessLevel: purposeLevels.friendliness,
-        humorLevel: purposeLevels.humor,
+      partnerId,
+      recognizedText,
+      screenType,
+      partnerName,
+      tone: {
+        formalityLevel: tone === 'frank' ? 1 : tone === 'normal' ? 2 : 3,
+        friendlinessLevel: purpose === 'greeting' ? 2 : 3,
+        humorLevel: purpose === 'date' ? 3 : 1,
       },
+      length,
+      purpose,
     });
   };
 
@@ -160,7 +146,7 @@ const TextToneAdjustmentScreen = () => {
 
         <TouchableOpacity
           style={styles.aiButton}
-          onPress={() => {/* TODO: Implement AI recommendation */}}
+          onPress={() => { /* TODO: AIオススメ機能 */}}
         >
           <Text style={styles.aiButtonText}>AIオススメ</Text>
         </TouchableOpacity>
@@ -175,6 +161,8 @@ const TextToneAdjustmentScreen = () => {
     </SafeAreaView>
   );
 };
+
+export default TextToneAdjustmentScreen;
 
 const styles = StyleSheet.create({
   container: {
@@ -270,5 +258,3 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
-
-export default TextToneAdjustmentScreen;
