@@ -93,12 +93,12 @@ export const GeneratedMessagesScreen: React.FC<Props> = ({ navigation, route }) 
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Icon name="arrow-back-outline" size={24} color="#000" />
+            <Icon name="arrow-back-outline" size={22} color="#000" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>生成結果</Text>
         </View>
         <TouchableOpacity onPress={handleRegenerate} style={styles.regenerateButton}>
-          <Icon name="refresh-outline" size={20} color="#333" style={{ marginRight: 5 }} />
+          <Icon name="refresh-outline" size={18} color="#333" style={{ marginRight: 5 }} />
           <Text style={styles.regenerateButtonText}>再生成</Text>
         </TouchableOpacity>
       </View>
@@ -116,7 +116,15 @@ export const GeneratedMessagesScreen: React.FC<Props> = ({ navigation, route }) 
           </TouchableOpacity>
         </View>
       ) : (
-        <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: 20 }}>
+        /**
+         * ここでポイント:
+         *  - 短文の場合にページ内に収めたい→Card間のマージンや行間を小さくする
+         *  - ScrollView自体は残し、入り切らない場合にスクロール可能にする
+         */
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollViewContent}
+        >
           {messages.map((message, index) => (
             <View key={index} style={styles.messageCard}>
               <Text style={styles.messageIndex}>提案 {index + 1}</Text>
@@ -127,13 +135,14 @@ export const GeneratedMessagesScreen: React.FC<Props> = ({ navigation, route }) 
                   style={[styles.button, styles.adjustButton]}
                   onPress={() => handleAdjust(index)}
                 >
-                  <Text style={styles.buttonText}>微調整</Text>
+                  <Text style={styles.adjustButtonText}>微調整</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.button, styles.adoptButton]}
                   onPress={() => handleAdopt(message)}
                 >
-                  <Text style={styles.buttonText}>採用(コピー)</Text>
+                  {/* ボタンの文字を白などにして、黒背景でも見やすく */}
+                  <Text style={styles.adoptButtonText}>コピーする</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -157,31 +166,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5E5',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   backButton: {
-    padding: 8,
+    padding: 4,
     marginRight: 8,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
   },
   regenerateButton: {
     flexDirection: 'row',
     backgroundColor: '#f0f0f0',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 8,
     alignItems: 'center',
   },
   regenerateButtonText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: 'bold',
     color: '#333',
   },
@@ -191,8 +200,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    marginTop: 12,
-    fontSize: 16,
+    marginTop: 8,
+    fontSize: 14,
     color: '#666',
   },
   noMessageContainer: {
@@ -201,55 +210,59 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   noMessageText: {
-    fontSize: 18,
+    fontSize: 16,
     color: '#666',
     marginBottom: 10,
   },
   noMessageRetryButton: {
     backgroundColor: '#f0f0f0',
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 8,
     borderRadius: 8,
   },
   noMessageRetryText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: 'bold',
     color: '#333',
   },
   scrollView: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 16,
+  },
+  scrollViewContent: {
+    padding: 10,
+    paddingBottom: 20,
   },
   messageCard: {
     backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 8,
     borderWidth: 1,
     borderColor: '#e0e0e0',
   },
   messageIndex: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
-    marginBottom: 6,
+    marginBottom: 4,
     color: '#E94C89',
   },
   messageText: {
-    fontSize: 16,
-    lineHeight: 24,
-    marginBottom: 12,
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 8,
     color: '#333',
   },
   buttonContainer: {
     flexDirection: 'row',
-    gap: 12,
+    // iOS/Android両対応のためmarginRight/Leftよりgapを使用
+    justifyContent: 'space-between',
   },
   button: {
     flex: 1,
-    padding: 12,
+    padding: 8,
     borderRadius: 8,
     alignItems: 'center',
+    marginHorizontal: 4, // gap代わり
   },
   adjustButton: {
     backgroundColor: '#f0f0f0',
@@ -257,9 +270,14 @@ const styles = StyleSheet.create({
   adoptButton: {
     backgroundColor: '#333',
   },
-  buttonText: {
-    fontSize: 14,
+  adjustButtonText: {
+    fontSize: 12,
     fontWeight: 'bold',
     color: '#333',
+  },
+  adoptButtonText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#fff', // 黒背景でも文字が見やすいよう白に
   },
 });

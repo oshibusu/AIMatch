@@ -7,6 +7,8 @@ import {
   TextInput,
   Platform,
   Clipboard,
+  KeyboardAvoidingView,
+  SafeAreaView,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -27,44 +29,53 @@ export const TextEditScreen: React.FC<Props> = ({ navigation, route }) => {
   };
 
   return (
-    <View style={styles.container}>
-      {/* ヘッダー */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Icon name="arrow-back-outline" size={24} color="#000" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>テキスト修正</Text>
-        <View style={styles.headerRight} />
-      </View>
-
-      {/* 編集エリア */}
-      <View style={styles.content}>
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.input}
-            value={editedMessage}
-            onChangeText={setEditedMessage}
-            multiline
-            autoFocus
-            textAlignVertical="top"
-          />
-          <TouchableOpacity style={styles.editIcon}>
-            <Icon name="pencil" size={20} color="#999" />
+    /**
+     * KeyboardAvoidingView: iOSではbehavior="padding"でキーボード高さ分押し上げる
+     * SafeAreaView: iPhoneのノッチやホームバーに対応
+     */
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <SafeAreaView style={styles.container}>
+        {/* ヘッダー */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Icon name="arrow-back-outline" size={24} color="#000" />
           </TouchableOpacity>
+          <Text style={styles.headerTitle}>テキスト修正</Text>
+          <View style={styles.headerRight} />
         </View>
 
-        {/* 採用ボタン */}
-        <TouchableOpacity
-          style={styles.adoptButton}
-          onPress={handleAdopt}
-        >
-          <Text style={styles.adoptButtonText}>採用（コピー）</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+        {/* 編集エリア */}
+        <View style={styles.content}>
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.input}
+              value={editedMessage}
+              onChangeText={setEditedMessage}
+              multiline
+              autoFocus
+              textAlignVertical="top"
+            />
+            <TouchableOpacity style={styles.editIcon}>
+              <Icon name="pencil" size={20} color="#999" />
+            </TouchableOpacity>
+          </View>
+
+          {/* 採用ボタン */}
+          <TouchableOpacity
+            style={styles.adoptButton}
+            onPress={handleAdopt}
+          >
+            <Text style={styles.adoptButtonText}>採用（コピー）</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -78,9 +89,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 16,
+    // キーボード押し上げの影響を受けずに、SafeAreaView最上部に配置したい場合は
+    // iOS用にpaddingTopをやや調整してもOK
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
-    paddingTop: Platform.OS === 'ios' ? 50 : 16,
+    // iOSで画面上部の余白が欲しいなら ↓ を入れる:
+    // paddingTop: Platform.OS === 'ios' ? 30 : 16,
   },
   backButton: {
     padding: 8,
@@ -110,6 +124,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 24,
     padding: 0,
+    // iOS/Androidでmultiline時にテキストが上から表示される
     minHeight: 100,
   },
   editIcon: {
@@ -122,7 +137,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#333',
     paddingVertical: 15,
     borderRadius: 30,
-    marginBottom: Platform.OS === 'ios' ? 30 : 20,
+    // キーボードAvoidによりボタンが上がるので
+    // iOSならさらに余白を開けたい場合は marginBottom: 30 など調整
   },
   adoptButtonText: {
     color: '#fff',
