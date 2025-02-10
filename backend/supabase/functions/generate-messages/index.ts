@@ -44,10 +44,11 @@ serve(async (req) => {
   try {
     const { recognizedText, tone, useDeepseek } = await req.json() as RequestBody;
 
-    // Load environment variables
+    // Load environment variables (Edge Functions本番環境ではdotenv不要)
     await import('https://deno.land/x/dotenv@v3.2.2/load.ts');
     
     const grokApiKey = Deno.env.get('GROK_API_KEY');
+    console.log('Check grokApiKey:', grokApiKey);
     const deepseekApiKey = Deno.env.get('DEEPSEEK_API_KEY');
     
     if (!grokApiKey || !deepseekApiKey) {
@@ -67,20 +68,59 @@ serve(async (req) => {
 
     // Chat用のプロンプト
     const isInformal = toneType === 'frank' || toneType === 'normal';
+    
+    /**
+     * [★ 重要 ★]
+     * "必ず(1)、(2)、(3)...の番号をつけて出力してください" と明記し、
+     * split(/\(\d+\)/) で分割しやすい形式にしてもらう
+     */
     let userPrompt = `
 あなたは20代後半の男性です。マッチングアプリで気になる相手とチャットをしています。
-以下の条件で、自然な返信メッセージを5つ考えてください。
+以下の条件で、自然な返信メッセージを(1)～(5)の形式で5つ考えてください。
 
-【メッセージの条件】
-- トーン: ${toneType}${isInformal ? '（タメ口で話してください）' : ''}
-- 目的: ${purpose}
+【形式】
+(1) メッセージ例1
+(2) メッセージ例2
+...のように番号をカッコ付きで必ず書いてください。他の形式にはしないでください。
 
-OCRテキスト: 
+【トーン】
+- ${toneType}${isInformal ? '（タメ口で話してください）' : ''}
+
+【目的】
+- ${purpose}
+- この目的に従ってメッセージを生成しなさい 
+
+【OCRテキスト】
 ${recognizedText || ''}
 
 【重要な注意点】
-(既存のルールをここに追記)
-`;
+あなたは恋愛コーチングのエキスパートです。
+- マッチングアプリの会話を円滑に進めるプロとして、魅力的かつ自然なメッセージを考案します
+- 基本的に、相手のメッセージにしっかり寄り添いなさい
+- 若者言葉を適度に使用しなさい
+- 絵文字はあまり使用せず、言葉で感情を表現してください
+- 相手の話題や文脈、興味に合わせて、前向きな印象を与える返信ができます
+- 文脈を理解して適切な返答ができます
+- フランクまたは普通のトーンの場合は必ずタメ口を使用し、「です・ます」ではなく「だよ・だね」などのカジュアルな表現を使ってください
+- ‘プライベートを侵害するような質問’や‘過度に踏み込みすぎる話題’は絶対に提案しません
+- 読み手が次に返しやすい内容・質問を含めることを推奨します」
+- 箇条書きはしないでください
+- 基本的に、各返信は以下の異なる視点から考えてください：
+    1つ目：相手の話に共感しながら、自分の感想を伝える
+    2つ目：相手の話に関連付けて話を展開する
+    3つ目：自分の似たような経験や考えを共有しつつ、相手の話に寄り添う
+    4つ目：相手の興味や活動に関連した新しい提案や可能性について触れる
+    5つ目：相手の話から派生した質問を投げかけ、会話を広げる
+- 過度に馴れ馴れしくならないよう節度を保ちつつ、友だちにアドバイスをする感覚でメッセージ案を提案します
+- "(笑)"も"笑"も使わないでください
+- 自慢話はしません
+- 相手の意図や行動を否定しません。ネガティブな言葉を使いません。
+- 必ずユーザーが指定するトーン（フランク／普通／丁寧など）に合った口調を使用します
+- ユーザーが希望するtoneが"Humorous"やユーモラスな場合は、ジョークを混ぜて面白い返信をします
+- ユーザーが希望するtoneがformalや丁寧な場合は、落ち着いて品のある雰囲気で、相手との距離感に配慮したメッセージ案を提案してください
+- 押しつけがましくない、自然な会話を心がけます`;
+
+;
 
     const messages: ChatMessage[] = [
       { role: "system", content: SYSTEM_PROMPT },
@@ -109,11 +149,16 @@ ${recognizedText || ''}
       throw new Error('Failed to generate messages with both Grok and Deepseek');
     }
 
-    const generatedMessages = completion.choices[0].message.content
-      .split(/\(\d+\)/)
-      .map((m: string) => m.trim())
-      .filter((m: string) => m);
+    // [★ 分割処理 ★]
+    // (1) ... (2) ... (3) ... となっているテキストを split(/\(\d+\)/) する
+    const rawOutput: string = completion.choices[0].message.content;
 
+    const generatedMessages = rawOutput
+      .split(/\(\d+\)/)           // 例: "(1)"や"(2)"を区切りに分割
+      .map((m: string) => m.trim())
+      .filter((m: string) => m);  // 空要素排除
+
+    // Edge Functionが返すJSON
     const response: SuccessResponse = { messages: generatedMessages };
     return new Response(JSON.stringify(response), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
