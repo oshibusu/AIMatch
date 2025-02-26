@@ -15,7 +15,7 @@ import { RootStackParamList } from '../types/navigation';
 type Props = NativeStackScreenProps<RootStackParamList, 'TextToneAdjustment'>;
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-type ToneType = 'frank' | 'normal' | 'formal';
+type ToneType = 'frank' | 'normal' | 'formal' | 'humorous';
 type LengthType = 'long' | 'medium' | 'short';
 type PurposeType = 'greeting' | 'chat' | 'date';
 
@@ -26,8 +26,9 @@ const TextToneAdjustmentScreen = () => {
   // PhotoUploadScreenから渡ってきたOCR結果など
   const { partnerId, recognizedText, screenType, partnerName } = route.params || {};
 
+  // 初期は「フランク、短、挨拶」をデフォルトに設定
   const [tone, setTone] = useState<ToneType>('frank');
-  const [length, setLength] = useState<LengthType>('long');
+  const [length, setLength] = useState<LengthType>('short');
   const [purpose, setPurpose] = useState<PurposeType>('greeting');
 
   const RadioButton = ({ selected }: { selected: boolean }) => (
@@ -36,19 +37,46 @@ const TextToneAdjustmentScreen = () => {
     </View>
   );
 
+  // AIオススメボタン押下時に自動でパラメータを設定する
+  const handleAIRecommend = () => {
+    if (screenType === 'profile') {
+      setTone('frank');
+      setLength('short');
+      setPurpose('greeting');
+    } else if (screenType === 'dm') {
+      setTone('frank');
+      setLength('short');
+      setPurpose('chat');
+    }
+  };
+
   const handleGenerateMessage = () => {
-    // GeneratedMessages画面に遷移
+    // ユーザーが選んだ「分量」に応じて数値化したtextLengthを決定
+    let textLength: number;
+    switch (length) {
+      case 'short':
+        textLength = 50;
+        break;
+      case 'medium':
+        textLength = 100;
+        break;
+      case 'long':
+      default:
+        textLength = 150;
+    }
+
     navigation.navigate('GeneratedMessages', {
       partnerId,
       recognizedText,
       screenType,
       partnerName,
       tone: {
-        formalityLevel: tone === 'frank' ? 1 : tone === 'normal' ? 2 : 3,
+        formalityLevel: tone === 'frank' ? 1 : tone === 'normal' ? 2 : tone === 'formal' ? 3 : 2,
         friendlinessLevel: purpose === 'greeting' ? 2 : 3,
-        humorLevel: purpose === 'date' ? 3 : 1,
+        humorLevel: tone === 'humorous' ? 3 : purpose === 'date' ? 2 : 1,
       },
-      length,
+      // lengthのテキストの数値指定を追加
+      textLength,
       purpose,
     });
   };
@@ -92,10 +120,17 @@ const TextToneAdjustmentScreen = () => {
             <RadioButton selected={tone === 'formal'} />
             <Text style={styles.radioLabel}>フォーマル</Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.radioRow}
+            onPress={() => setTone('humorous')}
+          >
+            <RadioButton selected={tone === 'humorous'} />
+            <Text style={styles.radioLabel}>ユーモア</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>分量</Text>
+          <Text style={styles.sectionTitle}>文量</Text>
           <TouchableOpacity
             style={styles.radioRow}
             onPress={() => setLength('long')}
@@ -146,7 +181,7 @@ const TextToneAdjustmentScreen = () => {
 
         <TouchableOpacity
           style={styles.aiButton}
-          onPress={() => { /* TODO: AIオススメ機能 */}}
+          onPress={handleAIRecommend}
         >
           <Text style={styles.aiButtonText}>AIオススメ</Text>
         </TouchableOpacity>
@@ -155,7 +190,7 @@ const TextToneAdjustmentScreen = () => {
           style={styles.generateButton}
           onPress={handleGenerateMessage}
         >
-          <Text style={styles.generateButtonText}>Generate Message</Text>
+          <Text style={styles.generateButtonText}>メッセージ生成</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

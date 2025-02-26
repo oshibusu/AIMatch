@@ -32,7 +32,7 @@ const UploadSelectionScreen = () => {
           style={styles.button}
           onPress={() => navigation.navigate('PhotoUpload', { type: 'newProfile' })}
         >
-          <Icon name="person-add-outline" size={24} color="#007AFF" style={styles.buttonIcon} />
+          <Icon name="person-add-outline" size={24} color="#FF655B" style={styles.buttonIcon} />
           <Text style={styles.buttonText}>新しい相手のプロフィール</Text>
         </TouchableOpacity>
 
@@ -40,7 +40,7 @@ const UploadSelectionScreen = () => {
           style={styles.button}
           onPress={() => navigation.navigate('PhotoUpload', { type: 'newChat' })}
         >
-          <Icon name="chatbubble-outline" size={24} color="#007AFF" style={styles.buttonIcon} />
+          <Icon name="chatbubble-outline" size={24} color="#FF655B" style={styles.buttonIcon} />
           <Text style={styles.buttonText}>新しい相手とのチャット</Text>
         </TouchableOpacity>
 
@@ -48,7 +48,7 @@ const UploadSelectionScreen = () => {
           style={styles.button}
           onPress={() => navigation.navigate('PhotoUpload', { type: 'existingChat' })}
         >
-          <Icon name="add-circle-outline" size={24} color="#007AFF" style={styles.buttonIcon} />
+          <Icon name="add-circle-outline" size={24} color="#FF655B" style={styles.buttonIcon} />
           <Text style={styles.buttonText}>既存のチャットに追加</Text>
         </TouchableOpacity>
 
@@ -56,7 +56,7 @@ const UploadSelectionScreen = () => {
           style={styles.button}
           onPress={() => navigation.navigate('PhotoUpload', { type: 'existingProfile' })}
         >
-          <Icon name="person-outline" size={24} color="#007AFF" style={styles.buttonIcon} />
+          <Icon name="person-outline" size={24} color="#FF655B" style={styles.buttonIcon} />
           <Text style={styles.buttonText}>既存のプロフィールに追加</Text>
         </TouchableOpacity>
       </View>
@@ -92,12 +92,12 @@ const styles = StyleSheet.create({
   button: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#FFF5F5', // Light red background
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#e9ecef',
+    borderColor: '#FFCCCB', // Light red border
   },
   buttonIcon: {
     marginRight: 16,

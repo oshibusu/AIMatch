@@ -3,7 +3,7 @@ import 'react-native-url-polyfill/auto';
 import { NavigationContainer, LinkingOptions } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View, Text, Platform, LogBox, YellowBox } from 'react-native';
+import { View, Text, Platform, LogBox, Linking } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { RootStackParamList } from './src/types/navigation';
 import { ErrorBoundary } from 'react-error-boundary';
@@ -12,29 +12,26 @@ import LoginScreen from './src/screens/LoginScreen';
 import SignInScreen from './src/screens/SignInScreen';
 import EmailSignUpScreen from './src/screens/EmailSignUpScreen';
 import PhotoUploadScreen from './src/screens/PhotoUploadScreen';
-import DateSpotSearchScreen from './src/screens/DateSpotSearchScreen';
+// import DateSpotSearchScreen from './src/screens/DateSpotSearchScreen'; // Not implemented yet
 import UploadSelectionScreen from './src/screens/UploadSelectionScreen';
 import TextToneAdjustmentScreen from './src/screens/TextToneAdjustmentScreen';
 import GeneratedMessagesScreen from './src/screens/GeneratedMessagesScreen';
 import CopyCompletedScreen from './src/screens/CopyCompletedScreen';
 import TextEditScreen from './src/screens/TextEditScreen';
+import HomeScreen from './src/screens/HomeScreen';
+import SettingsScreen from './src/screens/SettingsScreen';
+import ChatScreen from './src/screens/ChatScreen';
+import ChatBotScreen from './src/screens/ChatBotScreen';
+// import SpotDetailScreen from './src/screens/SpotDetailScreen'; // Not implemented yet
+import LanguageSettingsScreen from './src/screens/LanguageSettingsScreen';
+import AboutUsScreen from './src/screens/AboutUsScreen';
+import PrivacyPolicyScreen from './src/screens/PrivacyPolicyScreen';
+import HowToUseScreen from './src/screens/HowToUseScreen';
 
 // Placeholder components for other tabs
-const HomeScreen = () => (
-  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-    <Text>Home</Text>
-  </View>
-);
-
 const NotificationsScreen = () => (
   <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
     <Text>Notifications</Text>
-  </View>
-);
-
-const SettingsScreen = () => (
-  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-    <Text>Settings</Text>
   </View>
 );
 
@@ -59,13 +56,6 @@ if (__DEV__) {
 
   LogBox.ignoreLogs(ignoreWarns);
 
-  // デバッグ用のグローバルエラーハンドラー
-  const errorHandler = global.ErrorUtils.getGlobalHandler();
-  global.ErrorUtils.setGlobalHandler((error, isFatal) => {
-    console.log('Global Error:', error);
-    errorHandler(error, isFatal);
-  });
-
   // デバッグ用のコンソールオーバーライド
   const originalConsoleLog = console.log;
   console.log = (...args) => {
@@ -88,6 +78,10 @@ function MainTabs() {
         tabBarActiveTintColor: '#E94C89',
         tabBarInactiveTintColor: '#999',
         headerShown: false,
+        tabBarLabelStyle: {
+          fontSize: 12,
+          marginBottom: Platform.OS === 'ios' ? 0 : 5,
+        },
       }}>
       <Tab.Screen
         name="Home"
@@ -96,8 +90,11 @@ function MainTabs() {
           tabBarIcon: ({ color }) => (
             <Icon name="home-outline" size={24} color={color} />
           ),
+          tabBarLabel: 'ホーム',
+          headerShown: false,
         }}
       />
+      {/* DateSpotSearchScreen temporarily hidden
       <Tab.Screen
         name="Search"
         component={DateSpotSearchScreen}
@@ -105,8 +102,10 @@ function MainTabs() {
           tabBarIcon: ({ color }) => (
             <Icon name="search-outline" size={24} color={color} />
           ),
+          headerShown: false,
         }}
       />
+      */}
       <Tab.Screen
         name="Upload"
         component={PhotoUploadScreen}
@@ -120,20 +119,14 @@ function MainTabs() {
                 backgroundColor: '#E94C89',
                 justifyContent: 'center',
                 alignItems: 'center',
-                marginTop: -20,
+                marginTop: -25,
+                marginBottom: Platform.OS === 'ios' ? -5 : 5,
               }}>
-              <Icon name="add" size={24} color="#fff" />
+              <Icon name="add" size={30} color="#FFF" />
             </View>
           ),
-        }}
-      />
-      <Tab.Screen
-        name="Notifications"
-        component={NotificationsScreen}
-        options={{
-          tabBarIcon: ({ color }) => (
-            <Icon name="notifications-outline" size={24} color={color} />
-          ),
+          tabBarLabel: 'アップロード',
+          headerShown: false,
         }}
       />
       <Tab.Screen
@@ -143,6 +136,8 @@ function MainTabs() {
           tabBarIcon: ({ color }) => (
             <Icon name="settings-outline" size={24} color={color} />
           ),
+          tabBarLabel: '設定',
+          headerShown: false,
         }}
       />
     </Tab.Navigator>
@@ -151,7 +146,7 @@ function MainTabs() {
 
 function App(): React.JSX.Element {
   useEffect(() => {
-    console.log('App mounted');  // このログが表示されるはず
+    console.log('App mounted'); 
     return () => {
       console.log('App unmounted');
     };
@@ -159,19 +154,23 @@ function App(): React.JSX.Element {
 
   console.log('App is rendering');
 
+  // Using React Native's built-in Linking instead of expo-linking
   const linking: LinkingOptions<RootStackParamList> = {
-    prefixes: ['aimatch://'],
+    prefixes: ['aimatch://', 'https://aimatch.app'],
     config: {
       screens: {
         Login: 'login-callback',
         SignIn: 'signin',
         EmailSignUp: 'email-signup',
         MainTabs: 'main',
+        Chat: 'chat',
+        ChatBot: 'chatbot',
         UploadSelection: 'upload-selection',
         TextToneAdjustment: 'text-tone-adjustment',
         GeneratedMessages: 'generated-messages',
         CopyCompleted: 'copy-completed',
-        TextEdit: 'text-edit'
+        TextEdit: 'text-edit',
+        // SpotDetail: 'spot-detail' // Not implemented yet
       }
     }
   };
@@ -207,7 +206,8 @@ function App(): React.JSX.Element {
       >
         <Stack.Navigator
           initialRouteName="Login"
-          screenOptions={{ headerShown: false }}>
+          screenOptions={{ headerShown: false }}
+        >
           <Stack.Screen 
             name="Login" 
             component={LoginScreen}
@@ -220,12 +220,28 @@ function App(): React.JSX.Element {
           <Stack.Screen name="SignIn" component={SignInScreen} />
           <Stack.Screen name="EmailSignUp" component={EmailSignUpScreen} />
           <Stack.Screen name="MainTabs" component={MainTabs} />
+          <Stack.Screen name="Chat" component={ChatScreen} />
+          <Stack.Screen name="ChatBot" component={ChatBotScreen} />
           <Stack.Screen name="UploadSelection" component={UploadSelectionScreen} />
           <Stack.Screen name="PhotoUpload" component={PhotoUploadScreen} />
           <Stack.Screen name="TextToneAdjustment" component={TextToneAdjustmentScreen} />
           <Stack.Screen name="GeneratedMessages" component={GeneratedMessagesScreen} />
           <Stack.Screen name="CopyCompleted" component={CopyCompletedScreen} />
           <Stack.Screen name="TextEdit" component={TextEditScreen} />
+          {/* SpotDetail screen not implemented yet
+          <Stack.Screen
+            name="SpotDetail"
+            component={SpotDetailScreen}
+            options={{
+              headerShown: false,
+              presentation: 'modal',
+            }}
+          />
+          */}
+          <Stack.Screen name="LanguageSettings" component={LanguageSettingsScreen} />
+          <Stack.Screen name="AboutUs" component={AboutUsScreen} />
+          <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
+          <Stack.Screen name="HowToUse" component={HowToUseScreen} />
         </Stack.Navigator>
       </NavigationContainer>
     </ErrorBoundary>

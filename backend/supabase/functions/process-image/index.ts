@@ -35,17 +35,19 @@ interface SuccessResponse {
  *  - 必ず {"type": "profile"} または {"type": "dm"} のように返すことを要求
  */
 const SCREEN_TYPE_PROMPT = `
-あなたは優秀なアシスタントです。以下のテキストがプロフィール画面かDM画面かを判定してください。
-必ず厳密なJSON形式のみを出力してください。前後に、一切、他の文章や説明を入れないでください。
+あなたはJSONのみを出力する画面タイプ判定APIです。
+与えられたテキストを解析し、プロフィール画面かDM画面かを判定して、必ず以下の形式のJSONのみを出力してください。
+前後に説明文や余計な空白を含めないでください。
 
-形式:
-{
-  "type": "profile"
-}
-or
-{
-  "type": "dm"
-}
+必須ルール:
+1. 出力は {"type": "profile"} または {"type": "dm"} のみ
+2. 前後に説明文を含めない
+3. 改行を含めない
+4. 空白を含めない
+
+判定基準:
+- プロフィール画面: 年齢、趣味、自己紹介などの情報が含まれる
+- DM画面: 会話のやり取りが含まれる
 
 テキスト:
 `;
@@ -56,12 +58,15 @@ or
  *  - 不明な場合 {"name": "不明さん"} と返す
  */
 const PARTNER_NAME_PROMPT = `
-あなたは優秀なアシスタントです。以下のテキストから相手のユーザー名を1つ抽出してください。
-出力は必ず次のJSON形式とし、キーは "name" のみです。Please respond with only the JSON and no additional text or commentary.
-{ "name": "○○" }
+あなたはJSONのみを出力する名前抽出APIです。
+与えられたテキストから相手の名前を抽出し、必ず以下の形式のJSONのみを出力してください。
+前後に説明文や余計な空白を含めないでください。
 
-もしわからない場合は以下のJSONを返してください:
-{ "name": "不明さん" }
+必須ルール:
+1. 出力は {"name": "抽出した名前"} の形式のみ
+2. 前後に説明文を含めない
+3. 改行を含めない
+4. 空白を含めない
 
 テキスト:ユーザーの名前は、基本的に画面上部or左上にある。そこから抽出しなさい 
 `;
@@ -97,8 +102,14 @@ serve(async (req) => {
 
     // --- Geminiクライアント初期化 ---
     const genAI = new GoogleGenerativeAI(geminiApiKey);
-    // もし他のモデルを使う場合は 'models/gemini-1.5-pro' の部分を変更
-    const model = genAI.getGenerativeModel({ model: 'models/gemini-1.5-pro' });
+    const model = genAI.getGenerativeModel({ 
+      model: 'models/gemini-1.5-pro',
+      generationConfig: {
+        temperature: 0.1,  // temperatureを0.1に設定（0に近いほど決定論的）
+        topP: 0.1,        // より確実な選択のために低く設定
+        topK: 1,          // 最も確実な選択のみを使用
+      }
+    });
 
     console.log('Performing OCR...');
     // 画像のOCR: 画像データを inlineData で渡し、「Caption this image.」とだけ指示

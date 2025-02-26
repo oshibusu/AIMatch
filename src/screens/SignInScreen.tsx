@@ -58,9 +58,10 @@ const SignInScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
         // ユーザー情報の保存
         if (session?.user) {
           try {
-            const userEmail = signInResult.user.email || session.user.email;
-            const userName = signInResult.user.name || '';
-            const userPhoto = signInResult.user.photo || '';
+            // SignInResponse の型に合わせて修正
+            const userEmail = session.user.email;
+            const userName = '';
+            const userPhoto = '';
 
             if (!userEmail) {
               console.warn('User email not found in both signInResult and session');
@@ -170,11 +171,27 @@ const SignInScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Icon name="arrow-back-outline" size={24} color="#000" />
+        </TouchableOpacity>
+      </View>
+      
       <View style={styles.content}>
-        <Text style={styles.welcomeText}>AIMatchへようこそ</Text>
-        <Text style={styles.subText}>AIを使って理想の相手とマッチング</Text>
+        <View style={styles.logoContainer}>
+          <Icon name="sparkles-outline" size={80} color="#FF4B8C" style={styles.logoIcon} />
+        </View>
+        
+        <View style={styles.titleContainer}>
+          <Text style={styles.welcomeText}>AIMatchへようこそ</Text>
+          <Text style={styles.subText}>AIを使って理想の相手とマッチング</Text>
+        </View>
 
         <View style={styles.buttonContainer}>
+          {/* メールアドレス登録ボタンを非表示に
           <TouchableOpacity
             style={styles.emailButton}
             onPress={() => {
@@ -185,15 +202,16 @@ const SignInScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
             <Icon name="mail-outline" size={24} color="#007AFF" />
             <Text style={styles.emailButtonText}>メールアドレスで登録</Text>
           </TouchableOpacity>
+          */}
 
-          <TouchableOpacity style={styles.button} onPress={handleGoogleLogin}>
-            <Icon name="logo-google" size={24} color="#000" />
+          <TouchableOpacity style={styles.googleButton} onPress={handleGoogleLogin}>
+            <Icon name="logo-google" size={22} color="#000" style={styles.buttonIcon} />
             <Text style={styles.buttonText}>Googleでサインイン</Text>
           </TouchableOpacity>
 
           {Platform.OS === 'ios' && (
-            <TouchableOpacity style={styles.button} onPress={handleAppleLogin}>
-              <Icon name="logo-apple" size={24} color="#000" />
+            <TouchableOpacity style={styles.appleButton} onPress={handleAppleLogin}>
+              <Icon name="logo-apple" size={22} color="#000" style={styles.buttonIcon} />
               <Text style={styles.buttonText}>Apple IDでサインイン</Text>
             </TouchableOpacity>
           )}
@@ -208,26 +226,96 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F8F9FF',
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  backButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: '#F0F0F0',
+  },
   content: {
     flex: 1,
     paddingHorizontal: 24,
     paddingTop: 20,
+    alignItems: 'center',
+  },
+  logoContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(255, 75, 140, 0.1)',
+    marginBottom: 32,
+  },
+  logoIcon: {
+    opacity: 0.9,
+  },
+  titleContainer: {
+    alignItems: 'center',
+    marginBottom: 40,
   },
   welcomeText: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
     marginBottom: 12,
     color: '#000',
+    textAlign: 'center',
   },
   subText: {
     fontSize: 16,
     color: '#666',
     lineHeight: 24,
+    textAlign: 'center',
   },
   buttonContainer: {
     width: '100%',
     paddingHorizontal: 20,
-    marginTop: 40,
+    marginTop: 20,
+  },
+  googleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFF',
+    paddingVertical: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  appleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFF',
+    paddingVertical: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  buttonIcon: {
+    marginRight: 12,
+  },
+  buttonText: {
+    fontSize: 16,
+    color: '#000',
+    fontWeight: '500',
   },
   emailButton: {
     flexDirection: 'row',
@@ -256,10 +344,21 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
-  buttonText: {
-    fontSize: 16,
-    color: '#000',
-    fontWeight: '500',
+  termsContainer: {
+    alignItems: 'center',
+    marginTop: 24,
+    paddingHorizontal: 24,
+  },
+  termsNotice: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  termsLink: {
+    fontSize: 12,
+    color: '#FF4B8C',
+    textDecorationLine: 'underline',
   },
 });
 

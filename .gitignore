@@ -67,3 +67,8 @@ dist/
 web-build/
 backend/supabase/functions/generate-messages/.env
 **/.env
+
+# Expo
+.expo
+dist/
+web-build/

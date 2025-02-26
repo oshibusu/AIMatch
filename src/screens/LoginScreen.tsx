@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { GoogleSignin, type User, type NativeModuleError,statusCodes } from '@react-native-google-signin/google-signin';
 import { appleAuth } from '@invertase/react-native-apple-authentication';
 import { Platform } from 'react-native';
@@ -10,6 +10,8 @@ import {
   SafeAreaView,
   Pressable,
   Alert,
+  Modal,
+  ScrollView,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -29,6 +31,7 @@ const SparkleIcon = () => (
 );
 
 const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
+  const [termsModalVisible, setTermsModalVisible] = useState(false);
   const checkPreviousSignIn = async () => {
     try {
       const currentUser = await GoogleSignin.getCurrentUser();
@@ -113,20 +116,57 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     }
 
     try {
+      console.log('Starting Apple Sign-In process...');
+      
+      // Apple認証リクエストを実行
       const appleAuthRequestResponse = await appleAuth.performRequest({
         requestedOperation: appleAuth.Operation.LOGIN,
         requestedScopes: [appleAuth.Scope.EMAIL, appleAuth.Scope.FULL_NAME],
       });
 
-      const { identityToken } = appleAuthRequestResponse;
+      // レスポンスからトークンと情報を取得
+      const { identityToken, fullName, email } = appleAuthRequestResponse;
+      console.log('Apple Sign-In response received', {
+        hasToken: !!identityToken,
+        hasName: !!fullName,
+        hasEmail: !!email
+      });
 
       if (identityToken) {
-        const { error } = await supabase.auth.signInWithIdToken({
+        console.log('Attempting Supabase authentication with Apple ID token...');
+        const { data: { session }, error } = await supabase.auth.signInWithIdToken({
           provider: 'apple',
           token: identityToken,
         });
 
-        if (error) throw error;
+        if (error) {
+          console.error('Supabase auth error:', error);
+          throw error;
+        }
+        
+        console.log('Apple Sign-In successful with Supabase');
+        
+        // ユーザー情報の保存
+        if (session?.user && (fullName || email)) {
+          try {
+            const { error: upsertError } = await supabase
+              .from('users')
+              .upsert({
+                id: session.user.id,
+                email: email || session.user.email,
+                full_name: fullName ? `${fullName.givenName || ''} ${fullName.familyName || ''}`.trim() : null,
+                updated_at: new Date().toISOString(),
+              });
+
+            if (upsertError) {
+              console.error('Error saving user data:', upsertError);
+            } else {
+              console.log('User data saved successfully');
+            }
+          } catch (error) {
+            console.error('Error in user data operation:', error);
+          }
+        }
       } else {
         throw new Error('No identity token received');
       }
@@ -136,7 +176,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         console.log('User canceled Apple Sign in.');
       } else {
         Alert.alert('エラー', 'Appleログインに失敗しました');
-        console.error(error);
+        console.error('Apple Sign-In error:', error);
       }
     }
   };
@@ -174,21 +214,111 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             <Text style={styles.buttonText}>Apple IDで登録 </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
+          {/* メールアドレス登録ボタンを非表示に
+          <TouchableOpacity
             style={styles.button}
             onPress={() => navigation.navigate('EmailSignUp')}
           >
             <Icon name="mail-outline" size={20} color="#000" style={styles.buttonIcon} />
             <Text style={styles.buttonText}>メールアドレスで登録</Text>
           </TouchableOpacity>
+          */}
+        </View>
+
+        <View style={styles.termsContainer}>
+          <Text style={styles.termsNotice}>
+            登録をもって
+            <Text
+              style={styles.termsLink}
+              onPress={() => setTermsModalVisible(true)}
+            >
+              利用規約
+            </Text>
+            と
+            <Text
+              style={styles.termsLink}
+              onPress={() => setTermsModalVisible(true)}
+            >
+              プライバシーポリシー
+            </Text>
+            に同意したものとみなします
+          </Text>
         </View>
 
         <View style={styles.footerContainer}>
-          <Text style={styles.footerText}>Already have an account? </Text>
+          <Text style={styles.footerText}>既にアカウントを持っていますか? </Text>
           <Pressable onPress={handleExistingAccount}>
-            <Text style={styles.loginLink}>Log in</Text>
+            <Text style={styles.loginLink}>ログイン</Text>
           </Pressable>
         </View>
+        
+        {/* Terms of Service Modal */}
+        <Modal
+          animationType="slide"
+          transparent={false}
+          visible={termsModalVisible}
+          onRequestClose={() => setTermsModalVisible(false)}
+        >
+          <SafeAreaView style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={() => setTermsModalVisible(false)}
+              >
+                <Icon name="close" size={24} color="#000" />
+              </TouchableOpacity>
+              <Text style={styles.modalTitle}>利用規約</Text>
+            </View>
+            <ScrollView style={styles.modalContent}>
+              <View style={styles.termsContent}>
+                <Text style={styles.termsTitle}>AIMatch 利用規約</Text>
+                <Text style={styles.lastUpdate}>最終更新日：2025/02/25</Text>
+
+                <Text style={styles.sectionTitle}>1. 本規約への同意</Text>
+                <Text style={styles.termsContentText}>
+                  本利用規約（以下「本規約」）は、AIMatch(以下「本アプリ」)の利用条件を定めるものです。本アプリを利用することで、お客様は本規約に拘束されることに同意したものとみなされます。
+                </Text>
+                <Text style={styles.termsContentText}>
+                  当社は必要に応じて、本規約に補足条項や追加条件（以下「追加条件」）を定めることがあります。追加条件は本規約に組み込まれ、本規約の一部を構成します。当社は独自の裁量により、本規約を随時変更または修正する権利を留保します。変更内容は「最終更新日」を更新することで通知されます。定期的に本規約をご確認いただき、改訂内容を把握いただくようお願いいたします。お客様が改訂後も本アプリを利用する場合、改訂後の規約に同意したものとみなされます。
+                </Text>
+                <Text style={styles.termsContentText}>
+                  本アプリは、原則として18歳以上のユーザーを対象としています。18歳未満の方は、本アプリを利用または登録することはできません。
+                </Text>
+
+                <Text style={styles.sectionTitle}>2. 利用規約の受諾</Text>
+                <Text style={styles.termsContentText}>
+                  本アプリを利用することにより、お客様は本規約およびすべての適用法令や規制に従うことに同意し、法的に拘束されることを承諾したものとみなされます。本規約に同意いただけない場合は、本アプリの利用を中止してください。本規約は、本アプリのすべてのユーザーに適用されます。
+                </Text>
+
+                <Text style={styles.sectionTitle}>3. 本アプリの利用</Text>
+                <Text style={styles.termsContentText}>
+                  本アプリは、個人的かつ非商業的な利用のみを目的としています。お客様は本アプリを利用するにあたり、18歳以上であることを表明し、保証します。また、アカウントの機密情報を管理し、アカウント上で発生する一切の行為について責任を負うものとします。アカウントの不正使用やセキュリティ侵害を発見した場合には、ただちに当社へ通知してください。当社は、お客様が本条項に違反したことにより生じた損失や損害について、一切の責任を負いません。
+                </Text>
+
+                <Text style={styles.sectionTitle}>4. 知的財産権</Text>
+                <Text style={styles.termsContentText}>
+                  本アプリおよびそこに含まれるすべてのコンテンツや素材（テキスト、グラフィックス、画像、動画、ソフトウェア、ロゴなど）は、当社または当社にライセンスを供与する第三者の所有物であり、著作権、商標権その他の知的財産権によって保護されています。本規約によって、本アプリやそのコンテンツ・素材に対する所有権は一切譲渡されません。お客様には、本規約に基づき、個人的かつ非商業的目的で本アプリを利用する限定的、非独占的、譲渡不可、取り消し可能なライセンスが付与されるにとどまります。当社の明示的な許可なく、これらのコンテンツや素材を改変、複製、配布、送信、表示、実行、出版、ライセンス供与、派生物の作成、譲渡、販売することはできません。
+                </Text>
+
+                <Text style={styles.sectionTitle}>5. 禁止行為</Text>
+                <Text style={styles.termsContentText}>
+                  お客様は、以下の行為を行わないことに同意します。
+                </Text>
+                <Text style={styles.termsContentText}>
+                  {'\u2022'} 違法行為、または適用される法令・規制に違反する目的で本アプリを利用すること{'\n'}
+                  {'\u2022'} 有害、脅迫的、虐待的、嫌がらせ的、中傷的、わいせつ、卑猥、プライバシー侵害、または人種・民族・性別・宗教などに基づく差別的表現を含むコンテンツを投稿・配信・送信すること{'\n'}
+                  {'\u2022'} 他人または他組織へのなりすまし、あるいは関係を偽って主張すること{'\n'}
+                  {'\u2022'} ストーキングや嫌がらせを行うこと{'\n'}
+                  {'\u2022'} ウイルス、マルウェア、その他の有害なコードをアップロード、送信、配布すること
+                </Text>
+
+                <Text style={styles.termsContentText}>
+                  本規約は、2025/02/25以降、お客様が本アプリを利用することによって発効します。お客様が本規約に同意されない場合は、本アプリのご利用を中止してください。
+                </Text>
+              </View>
+            </ScrollView>
+          </SafeAreaView>
+        </Modal>
       </View>
     </SafeAreaView>
   );
@@ -264,6 +394,88 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#000',
     fontWeight: '600',
+    textDecorationLine: 'underline',
+  },
+  // Terms of Service Modal Styles
+  termsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    marginBottom: 20,
+  },
+  termsIcon: {
+    marginRight: 4,
+  },
+  termsButtonText: {
+    color: '#007AFF',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  closeButton: {
+    padding: 8,
+    marginRight: 8,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+  },
+  modalContent: {
+    flex: 1,
+  },
+  termsContent: {
+    padding: 16,
+  },
+  termsTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    color: '#1A1A1A',
+  },
+  lastUpdate: {
+    fontSize: 14,
+    fontStyle: 'italic',
+    color: '#666',
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginTop: 24,
+    marginBottom: 8,
+    color: '#1A1A1A',
+  },
+  termsContentText: {
+    fontSize: 14,
+    lineHeight: 22,
+    color: '#333',
+    marginBottom: 12,
+  },
+  termsContainer: {
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingHorizontal: 24,
+  },
+  termsNotice: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  termsLink: {
+    fontSize: 12,
+    color: '#007AFF',
     textDecorationLine: 'underline',
   },
 });

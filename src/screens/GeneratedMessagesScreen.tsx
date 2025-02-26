@@ -17,6 +17,14 @@ import Icon from 'react-native-vector-icons/Ionicons';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'GeneratedMessages'>;
 
+// 文字列の最後が"。"の場合のみ除去する関数
+const removeTrailingPeriod = (text: string): string => {
+  if (text.endsWith('。')) {
+    return text.slice(0, -1);  // 最後の1文字を除去
+  }
+  return text;
+};
+
 export const GeneratedMessagesScreen: React.FC<Props> = ({ navigation, route }) => {
   const [messages, setMessages] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,7 +57,7 @@ export const GeneratedMessagesScreen: React.FC<Props> = ({ navigation, route }) 
         throw new Error('Edge Functionから有効なレスポンスがありません');
       }
 
-      setMessages(data.messages.slice(0, 7)); // 7個まで
+      setMessages(data.messages.slice(0, 7).map(removeTrailingPeriod)); // 7個まで
     } catch (err) {
       console.error('Error generating messages:', err);
       Alert.alert('エラー', `メッセージ生成に失敗しました: ${err instanceof Error ? err.message : '不明なエラー'}`);
@@ -135,14 +143,16 @@ export const GeneratedMessagesScreen: React.FC<Props> = ({ navigation, route }) 
                   style={[styles.button, styles.adjustButton]}
                   onPress={() => handleAdjust(index)}
                 >
-                  <Text style={styles.adjustButtonText}>微調整</Text>
+                  <Icon name="create-sharp" size={18} color="#333" style={{ marginRight: 4 }} />
+                  <Text style={styles.adjustButtonText}>修正</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.button, styles.adoptButton]}
                   onPress={() => handleAdopt(message)}
                 >
                   {/* ボタンの文字を白などにして、黒背景でも見やすく */}
-                  <Text style={styles.adoptButtonText}>コピーする</Text>
+                  <Icon name="copy" size={18} color="#fff" style={{ marginRight: 4 }} />
+                  <Text style={styles.adoptButtonText}>コピー</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -261,6 +271,8 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 8,
     borderRadius: 8,
+    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
     marginHorizontal: 4, // gap代わり
   },

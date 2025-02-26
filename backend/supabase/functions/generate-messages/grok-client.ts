@@ -6,7 +6,7 @@ export class GrokClient implements AIClient {
 
   constructor(apiKey: string) {
     this.apiKey = apiKey;
-    this.baseUrl = "https://api.grok.ai/v1";
+    this.baseUrl = "https://api.x.ai/v1";  
   }
 
   async createChatCompletion(messages: Array<{ role: string; content: string }>): Promise<AIResponse> {
@@ -16,21 +16,29 @@ export class GrokClient implements AIClient {
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
         body: JSON.stringify({
-          model: 'grok-1',
+          model: 'grok-2-latest',
           messages,
           temperature: 0.9,
+          max_tokens: 1000,
         }),
       });
 
       if (!response.ok) {
-        throw new Error(`Grok API error: ${response.statusText}`);
+        const errorText = await response.text();
+        throw new Error(`Grok API error: ${response.status} - ${response.statusText}\n${errorText}`);
       }
 
       const data: AIResponse = await response.json();
       return data;
     } catch (error) {
+      console.error('Grok API request failed:', {
+        error: error.message,
+        stack: error.stack,
+        timestamp: new Date().toISOString()
+      });
       throw error;
     }
   }

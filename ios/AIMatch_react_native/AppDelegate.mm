@@ -1,6 +1,7 @@
 #import "AppDelegate.h"
 #import <GoogleSignIn/GoogleSignIn.h>
 #import <React/RCTBundleURLProvider.h>
+#import <AuthenticationServices/AuthenticationServices.h>
 
 @implementation AppDelegate
 
@@ -10,7 +11,7 @@
 #if DEBUG
   // デバッグビルド → Metro Bundler 経由
   // fallbackResourceパラメータは不要になったので引数1つだけ
-  return [[RCTBundleURLProvider sharedSettings] jsBundleURLForBundleRoot:@"index"];
+  return [[RCTBundleURLProvider sharedSettings] jsBundleURLForBundleRoot:@".expo/.virtual-metro-entry"];
 #else
   // リリースビルド → 埋め込み済みの main.jsbundle を読み込む
   return [[NSBundle mainBundle] URLForResource:@"main" withExtension:@"jsbundle"];
@@ -33,12 +34,30 @@
   return [super application:application didFinishLaunchingWithOptions:launchOptions];
 }
 
-// Google Sign-In のコールバック (オプション、GID を使うなら必須)
+// Google Sign-In と Apple Sign-In のコールバック
 - (BOOL)application:(UIApplication *)application
             openURL:(NSURL *)url
             options:(NSDictionary<UIApplicationOpenURLOptionsKey,id> *)options
 {
-  return [[GIDSignIn sharedInstance] handleURL:url];
+  // Google Sign-In のコールバック処理
+  BOOL handled = [[GIDSignIn sharedInstance] handleURL:url];
+  if (handled) {
+    return YES;
+  }
+  
+  // 他のURLスキームの処理があればここに追加
+  
+  return NO;
+}
+
+// Universal Links のサポート (Apple Sign-In で使用)
+- (BOOL)application:(UIApplication *)application continueUserActivity:(nonnull NSUserActivity *)userActivity restorationHandler:(nonnull void (^)(NSArray<id<UIUserActivityRestoring>> * _Nullable))restorationHandler {
+  if ([userActivity.activityType isEqualToString:NSUserActivityTypeBrowsingWeb]) {
+    NSURL *url = userActivity.webpageURL;
+    // ここでUniversal Linkの処理を行う
+    return YES;
+  }
+  return NO;
 }
 
 // 旧アーキテクチャ用メソッドは削除 or コメントアウト

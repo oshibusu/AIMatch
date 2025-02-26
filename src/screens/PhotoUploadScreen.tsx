@@ -2,40 +2,48 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
+  TouchableOpacity,
   SafeAreaView,
-  Platform,
   Alert,
   ActivityIndicator,
   Image,
   Modal,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../types/navigation';
+import { useNavigation, useRoute, RouteProp, useFocusEffect } from '@react-navigation/native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { supabase } from '../lib/supabase';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../types/navigation';
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+// 型定義
+type NavigationProps = NativeStackNavigationProp<RootStackParamList>;
 type RouteProps = RouteProp<RootStackParamList, 'PhotoUpload'>;
 
 const PhotoUploadScreen = () => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [showTypeModal, setShowTypeModal] = useState(false);
-  const [selectedType, setSelectedType] = useState<'newProfile' | 'newChat' | 'existingChat' | null>(null);
-
-  const navigation = useNavigation<NavigationProp>();
+  
+  const navigation = useNavigation<NavigationProps>();
   const route = useRoute<RouteProps>();
 
+  // 画面がフォーカスされた時のリセット処理
+  useFocusEffect(
+    React.useCallback(() => {
+      setSelectedImage(null);
+      setIsUploading(false);
+    }, [])
+  );
+
+  // 画面遷移前のリセット処理
   useEffect(() => {
-    // 必要に応じて、route.params?.typeを反映
-    if (route.params?.type) {
-      setSelectedType(route.params.type);
-    }
-  }, [route.params]);
+    const unsubscribe = navigation.addListener('beforeRemove', () => {
+      setSelectedImage(null);
+      setIsUploading(false);
+    });
+    return unsubscribe;
+  }, [navigation]);
 
   // 画像選択
   const handleImageSelect = async () => {
@@ -44,7 +52,6 @@ const PhotoUploadScreen = () => {
         mediaType: 'photo',
         quality: 0.8,
       });
-
       if (result.assets && result.assets[0]?.uri) {
         setSelectedImage(result.assets[0].uri);
       }
@@ -54,12 +61,8 @@ const PhotoUploadScreen = () => {
     }
   };
 
-  // Edge Function(process-image)を呼び出してOCR
+  // Edge Function(process-image)を呼び出してOCRなどの処理
   const handleUploadPress = async () => {
-    if (!selectedType) {
-      setShowTypeModal(true);
-      return;
-    }
     if (!selectedImage) {
       Alert.alert('エラー', '画像を選択してください。');
       return;
@@ -85,7 +88,7 @@ const PhotoUploadScreen = () => {
       const timestamp = new Date().toISOString();
       console.log('Current user ID:', userId);
 
-      // Blob → Base64
+      // Blob → Base64変換
       const reader = new FileReader();
       const base64Promise = new Promise<string>((resolve, reject) => {
         reader.onload = () => {
@@ -101,12 +104,11 @@ const PhotoUploadScreen = () => {
       const base64Data = await base64Promise;
       const base64Clean = base64Data.split(',')[1]; // プレフィックスを除去
 
-      // デバッグ用のログを追加
       console.log('Base64 data length:', base64Clean.length);
       console.log('Request payload:', {
         userId,
         timestamp,
-        imageLength: base64Clean.length
+        imageLength: base64Clean.length,
       });
 
       // Edge Function "process-image" を呼び出してOCR/DB保存などを実行
@@ -120,12 +122,7 @@ const PhotoUploadScreen = () => {
       });
 
       if (processError) {
-        console.error('Image processing error:', {
-          message: processError.message,
-          cause: processError.cause,
-          stack: processError.stack,
-          details: processError
-        });
+        console.error('Image processing error:', processError);
         throw processError;
       }
       if (!processedData) {
@@ -145,8 +142,8 @@ const PhotoUploadScreen = () => {
               screenType: processedData.screenType,
               partnerName: processedData.partnerName,
             });
-          }
-        }
+          },
+        },
       ]);
     } catch (error) {
       console.error('Upload error:', error);
@@ -156,83 +153,17 @@ const PhotoUploadScreen = () => {
     }
   };
 
-  // モーダル (アップロードタイプ選択)
-  const renderTypeModal = () => (
-    <Modal
-      visible={showTypeModal}
-      transparent
-      animationType="slide"
-      onRequestClose={() => setShowTypeModal(false)}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>アップロードタイプを選択</Text>
-
-          <TouchableOpacity
-            style={styles.typeButton}
-            onPress={() => {
-              setSelectedType('newProfile');
-              setShowTypeModal(false);
-            }}
-          >
-            <Icon name="person-add-outline" size={24} color="#007AFF" style={styles.typeIcon} />
-            <Text style={styles.typeButtonText}>新しい相手のプロフィール</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.typeButton}
-            onPress={() => {
-              setSelectedType('newChat');
-              setShowTypeModal(false);
-            }}
-          >
-            <Icon name="chatbubble-outline" size={24} color="#007AFF" style={styles.typeIcon} />
-            <Text style={styles.typeButtonText}>新しい相手とのチャット</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.typeButton}
-            onPress={() => {
-              setSelectedType('existingChat');
-              setShowTypeModal(false);
-            }}
-          >
-            <Icon name="add-circle-outline" size={24} color="#007AFF" style={styles.typeIcon} />
-            <Text style={styles.typeButtonText}>既存のチャットに追加</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.cancelButton}
-            onPress={() => setShowTypeModal(false)}
-          >
-            <Text style={styles.cancelButtonText}>キャンセル</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </Modal>
-  );
-
-  const getTypeLabel = (type: string) => {
-    switch (type) {
-      case 'newProfile':
-        return '新しい相手のプロフィール';
-      case 'newChat':
-        return '新しい相手とのチャット';
-      case 'existingChat':
-        return '既存のチャットに追加';
-      default:
-        return 'アップロードタイプを選択';
-    }
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Icon name="arrow-back" size={24} color="#000" />
-        </TouchableOpacity>
         <Text style={styles.headerTitle}>写真のアップロード</Text>
+        <TouchableOpacity
+          style={styles.helpButton}
+          onPress={() => navigation.navigate('HowToUse')}
+        >
+          <Icon name="help-circle-outline" size={24} color="#007AFF" />
+        </TouchableOpacity>
       </View>
 
       {/* Content */}
@@ -244,10 +175,7 @@ const PhotoUploadScreen = () => {
               style={styles.selectedImage}
               resizeMode="contain"
             />
-            <TouchableOpacity
-              style={styles.changeImageButton}
-              onPress={handleImageSelect}
-            >
+            <TouchableOpacity style={styles.changeImageButton} onPress={handleImageSelect}>
               <Text style={styles.changeImageText}>写真を変更</Text>
             </TouchableOpacity>
           </View>
@@ -257,22 +185,10 @@ const PhotoUploadScreen = () => {
             onPress={handleImageSelect}
             disabled={isUploading}
           >
-            <Icon name="image-outline" size={40} color="#666" />
+            <Icon name="image-outline" size={40} color="#FF655B" />
             <Text style={styles.uploadText}>写真を選択</Text>
           </TouchableOpacity>
         )}
-
-        {/* 選択されたタイプ */}
-        <TouchableOpacity
-          style={styles.typeSelectButton}
-          onPress={() => setShowTypeModal(true)}
-        >
-          <Icon name="list-outline" size={24} color="#007AFF" style={styles.typeIcon} />
-          <Text style={styles.typeSelectText}>
-            {selectedType ? getTypeLabel(selectedType) : 'アップロードタイプを選択'}
-          </Text>
-          <Icon name="chevron-forward-outline" size={24} color="#007AFF" />
-        </TouchableOpacity>
       </View>
 
       {/* Footer */}
@@ -280,10 +196,10 @@ const PhotoUploadScreen = () => {
         <TouchableOpacity
           style={[
             styles.submitButton,
-            (!selectedImage || !selectedType || isUploading) && styles.submitButtonDisabled
+            (!selectedImage || isUploading) && styles.submitButtonDisabled,
           ]}
           onPress={handleUploadPress}
-          disabled={!selectedImage || !selectedType || isUploading}
+          disabled={!selectedImage || isUploading}
         >
           {isUploading ? (
             <ActivityIndicator color="#FFF" />
@@ -292,8 +208,6 @@ const PhotoUploadScreen = () => {
           )}
         </TouchableOpacity>
       </View>
-
-      {renderTypeModal()}
     </SafeAreaView>
   );
 };
@@ -308,30 +222,33 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
-  },
-  backButton: {
-    padding: 8,
+    justifyContent: 'space-between',
+    backgroundColor: '#fff',
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    marginLeft: 16,
+  },
+  helpButton: {
+    padding: 8,
   },
   content: {
     flex: 1,
     padding: 20,
   },
   imageContainer: {
-    width: '100%',
+    width: '80%', // Reduced from 100% to 80%
     aspectRatio: 1,
     borderRadius: 12,
     overflow: 'hidden',
     backgroundColor: '#f5f5f5',
     alignItems: 'center',
     marginBottom: 20,
+    alignSelf: 'center', // Center the container
   },
   selectedImage: {
     width: '100%',
@@ -340,7 +257,7 @@ const styles = StyleSheet.create({
   changeImageButton: {
     position: 'absolute',
     bottom: 16,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: 'rgba(255, 101, 91, 0.8)', // Semi-transparent Tinder-like red
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
@@ -351,39 +268,23 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   uploadButton: {
-    width: '100%',
+    width: '80%', // Match the image container width
     aspectRatio: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#FFF5F5', // Lighter shade of red
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#ddd',
+    borderColor: '#FFCCCB', // Light red border
     borderStyle: 'dashed',
     marginBottom: 20,
+    alignSelf: 'center', // Center the button
   },
   uploadText: {
     marginTop: 12,
     fontSize: 16,
-    color: '#666',
-  },
-  typeSelectButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f8f9fa',
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#e9ecef',
-  },
-  typeSelectText: {
-    flex: 1,
-    fontSize: 16,
-    color: '#000',
-    marginLeft: 16,
-  },
-  typeIcon: {
-    marginRight: 8,
+    color: '#FF655B', // Match the icon color
+    fontWeight: '500',
   },
   footer: {
     padding: 16,
@@ -391,7 +292,7 @@ const styles = StyleSheet.create({
     borderTopColor: '#eee',
   },
   submitButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#FF655B',
     borderRadius: 8,
     padding: 16,
     alignItems: 'center',
@@ -402,48 +303,6 @@ const styles = StyleSheet.create({
   submitButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '600',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  typeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderRadius: 12,
-    backgroundColor: '#f8f9fa',
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#e9ecef',
-  },
-  typeButtonText: {
-    fontSize: 16,
-    color: '#000',
-  },
-  cancelButton: {
-    marginTop: 8,
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    color: '#007AFF',
     fontWeight: '600',
   },
 });
